@@ -1,0 +1,73 @@
+Dane County Election Results Scraper
+Erik Paulson
+epaulson@unit1127.com
+This is not important enough to warrant a copyright
+or license, so do with it what you will. 
+4 March 2012
+
+The Dane County Clerk's office publishes election results online here:
+
+http://www.countyofdane.com/election/results.aspx
+
+However, the reports look more like they're from an ImageWriter II somehow
+connected to the web. Consider this:
+
+http://www.countyofdane.com/clerk/elect2011s2.html
+
+
+														  ASSEMBLY DISTRICT 48
+		   REPRESENTATIVE TO THE ASSEMBLY DISTRICT 48
+		   Vote for  1
+												  W
+												   R
+										   C T      I
+											H A      T
+											 R Y      E
+											  I L      -
+											   S O      I
+												  R      N
+											   (DEM)   (NON)
+											   -----   -----
+		0004 T BLOOMING GROVE WDS 1-3            127       9
+		0015 T DUNN WDS 2-6                      176      18
+		0058 V MCFARLAND WDS 1-7                 486     103
+		0078 C MADISON WD 1                      301      11
+		0079 C MADISON WD 2                      360      30
+		0080 C MADISON WD 3                      206      16
+		0081 C MADISON WD 4                      169      18
+		0082 C MADISON WD 5                      281      23
+		0083 C MADISON WD 6                      219      10
+		0084 C MADISON WD 7                      253       9
+		0085 C MADISON WD 8                      152       9
+		0087 C MADISON WD 10                     256      14
+		0088 C MADISON WD 11                     405      16
+		0089 C MADISON WD 12                     160       8
+		0090 C MADISON WD 13                      77       3
+		0110 C MADISON WD 33                     794      10
+		0132 C MADISON WD 55                       4       0
+		0133 C MADISON WD 56                      99       4
+		0208 C MADISON WD 131                      0       0
+		0231 C MONONA WDS 1-5                    521      37
+		0232 C MONONA WDS 6-10                   407      31
+						 CANDIDATE TOTALS       5453     379
+						CANDIDATE PERCENT      93.50    6.49
+
+
+Which isn't the easiest thing to extract through XPath. 
+
+This python script tries to extract a JSON document from the results.
+
+Usage is simple:
+
+	python extract-dane-election-data.py http://www.countyofdane.com/clerk/elect2011s2.html 
+
+It requires lxml and a json library.
+
+Hopefully your county clerk reports results in something more structured than ours, and
+hopefully our County Clerk's office updates its reporting software to be something more
+machine-friendly in the future.
+
+TODO:
+
+If there's a standard markup for election results, I'd love to report out in that instead
+of with a JSON dump of an python data structure. 
