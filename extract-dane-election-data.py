@@ -15,6 +15,8 @@ import re
 try: import simplejson as json
 except ImportError: import json
 import lxml.html
+import argparse
+import csv
 
 #
 # Given a set of lines from the larger election results text,
@@ -136,15 +138,21 @@ def parseResults(locallines, starts, dx, top, bottom,elecdesc):
     return report
 
 # Start of actual code
-if (len(sys.argv) <= 1):
-    print("Usage: python extract-dane-election-data.py URL")
-    exit(1)
 
-try:
-    doc = lxml.html.parse(sys.argv[1]).getroot()
-except e:
-    # TODO - do something with this
-    pass
+parser = argparse.ArgumentParser(description='Download and parse Dane County Election Results')
+
+parser.add_argument('-json', action="store_true", default=False, help='Format the results as a single JSON object')
+parser.add_argument('url', help='The Election URL to scrape')
+parser.add_argument('dir', help='Directory in which to store resulting CSV files')
+
+args = vars(parser.parse_args())
+
+if args['url']:
+    try:
+        doc = lxml.html.parse(args['url']).getroot()
+    except e:
+        # TODO - do something with this
+        pass
 
 #
 # It's easy to find the start of the report, after ignoring
@@ -186,6 +194,7 @@ headerOver = False
 searching = True
 seenAnything = False
 
+electionNumber = 0
 # our list for where we'll keep everything when we're done. Once
 # we extract data, we reset our state machine and continue on through
 # the lines
@@ -248,7 +257,21 @@ for n in range(len(lines)):
         headerOver = False
         searching = True
         seenAnything = False
+        electionNumber += 1
         elecdesc = []
 
 # dump it out and call it a day
-print json.dumps(extracted)
+if args['json']:
+    print json.dumps(extracted)
+else:
+    for i in range(electionNumber):
+        f = open("%s/race%d.csv" % (args['dir'], i), 'wt')
+        fields = ["WardNumber", "WardDesc"] + extracted[i]['Candidates']
+        print "\nProcessing Race%d.csv -- %s " % (i, extracted[i]['ElectionDescription'])
+        print fields
+        output = csv.writer(f)
+        output.writerow(fields)
+        for row in extracted[i]['WardData']:
+            output.writerow([row['WardNumber'], row['WardDesc']] + row['Votes'])
+        f.close()
+    print "\n\nExtracted %d elections" % (electionNumber)
