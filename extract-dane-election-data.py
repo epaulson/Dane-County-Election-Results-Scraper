@@ -143,7 +143,7 @@ parser = argparse.ArgumentParser(description='Download and parse Dane County Ele
 
 parser.add_argument('-json', action="store_true", default=False, help='Format the results as a single JSON object')
 parser.add_argument('url', help='The Election URL to scrape')
-parser.add_argument('dir', help='Directory in which to store resulting CSV files')
+parser.add_argument('dir', help='Directory in which to store resulting CSV files. Must exist before running the script')
 
 args = vars(parser.parse_args())
 

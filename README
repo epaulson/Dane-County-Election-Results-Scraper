@@ -59,7 +59,11 @@ This python script tries to extract a JSON document from the results.
 
 Usage is simple:
 
-	python extract-dane-election-data.py http://www.countyofdane.com/clerk/elect2011s2.html 
+	python extract-dane-election-data.py [-h] [-json] http://www.countyofdane.com/clerk/elect2011s2.html output_directory
+
+output_directory has to exist before running the script. 
+-h is help
+-json means output as JSON
 
 It requires lxml and a json library.
 
