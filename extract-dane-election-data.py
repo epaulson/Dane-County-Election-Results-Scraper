@@ -75,8 +75,11 @@ def parseResults(locallines, starts, dx, top, bottom,elecdesc):
     # Now, we're going to find results. Results for wards all start with a number
     # the totals and percentages have a unqiue string, so we'll find them that way
     wardpat = re.compile("^\d+")
-    totalpat = re.compile("TOTALS")
+    totalspat = re.compile("TOTALS")
+    totalpat = re.compile("TOTAL")
     percentpat = re.compile("PERCENT")
+    # from http://stackoverflow.com/questions/4703390/how-to-extract-a-floating-number-from-a-string-in-python
+    floatingpointpat = re.compile("[-+]?\d*\.\d+|\d+")
 
     wards = []
     totalvotes = []
@@ -112,12 +115,37 @@ def parseResults(locallines, starts, dx, top, bottom,elecdesc):
         # Percentages isn't always present - the total ballots report (which
         # some elections is posted and others isn't) doesn't do a breakdown
         # this way
-        if(totalpat.search(l)): 
+        if(totalspat.search(l)): 
            atoms = l.split()
            totalvotes = atoms[-len(labels):]
+           #
+           # OK, this sorta blows - sometimes you'll get lines like this:
+           #  (from spring 2001 election in Mazo - three(!) writein slots, none used)
+           #
+           # 0051 VILLAGE OF MAZOMANIE WDS 1-2         67      72      49      47      33      63      79       0       0       0
+           #                               TOTALS      67      72      49      47      33      63      79
+           #                      PERCENT OF TOTAL   16.34   17.56   11.95   11.46    8.04   15.36   19.26
+           #
+           #   so, we'll look for a position where see a number, and take the slice to the end, 
+           #   treat that as our new list of totals, and stick zeros on the end
+           #
+           for u in range(len(totalvotes)):
+               if(floatingpointpat.search(totalvotes[u])):
+                   validtotals = totalvotes[u:]
+                   validtotals.extend(list('0' for n in range(len(labels) - len(validtotals))))
+                   totalvotes = validtotals
+                   break
+        # 
+        # Play the same trick as above for missing percentages
         if(percentpat.search(l)): 
            atoms = l.split()
            percents = atoms[-len(labels):]
+           for u in range(len(percents)):
+               if(floatingpointpat.search(percents[u])):
+                   validpercents = percents[u:]
+                   validpercents.extend(list('0' for n in range(len(labels) - len(validpercents))))
+                   percents = validpercents
+                   break
         #
         # There's no real end of record that you can look at
         # so as soon as we hit a line that's entirely blank, we
@@ -141,9 +169,12 @@ def parseResults(locallines, starts, dx, top, bottom,elecdesc):
 
 parser = argparse.ArgumentParser(description='Download and parse Dane County Election Results')
 
-parser.add_argument('-json', action="store_true", default=False, help='Format the results as a single JSON object')
+group = parser.add_mutually_exclusive_group()
+
 parser.add_argument('url', help='The Election URL to scrape')
 parser.add_argument('dir', help='Directory in which to store resulting CSV files. Must exist before running the script')
+group.add_argument('-json', action="store_true", default=False, help='Format the results as a single JSON object')
+group.add_argument('-summary', action="store_true", default=False, help='One-line summary of each election in the results')
 
 args = vars(parser.parse_args())
 
@@ -263,6 +294,15 @@ for n in range(len(lines)):
 # dump it out and call it a day
 if args['json']:
     print json.dumps(extracted)
+elif args['summary']:
+    def addtwo(x,y): return float(x)+float(y)
+
+    for i in range(electionNumber):
+        #print "\nProcessing Race%d.csv -- %s " % (i, extracted[i]['ElectionDescription'])
+        election_summary =  zip(extracted[i]['Candidates'], map(int, extracted[i]['VoteTotals']), map(float, extracted[i]['Percentages']) if extracted[i]['Percentages'] else list((float(extracted[i]['VoteTotals'][n]) / float(reduce(addtwo, extracted[i]['VoteTotals'] )) * 100.0) for n in range(len(extracted[i]['Candidates']))))
+        # from http://stackoverflow.com/questions/457215/comprehension-for-flattening-a-sequence-of-sequences 
+        joined =  reduce(election_summary[0].__class__.__add__, election_summary)
+        print "Race%d,%s,%s" % (i, extracted[i]['ElectionDescription'], ','.join(str(e) for e in joined))
 else:
     for i in range(electionNumber):
         f = open("%s/race%d.csv" % (args['dir'], i), 'wt')
