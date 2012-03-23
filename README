@@ -59,10 +59,15 @@ This python script tries to extract a JSON document from the results.
 
 Usage is simple:
 
-	python extract-dane-election-data.py [-h] [-json | -summary] http://www.countyofdane.com/clerk/elect2011s2.html output_directory
+	python extract-dane-election-data.py [-h] [-genheader] [-header headerfile.csv] [-json | -summary] http://www.countyofdane.com/clerk/elect2011s2.html output_directory
 
 output_directory has to exist before running the script. 
 -h is help
+
+-header headerfile.csv - Assume headerfile.csv has two columns of RaceX, ElectionDescription. For the election description generated, use what's provided in the the CSV file instead of what the extractor finds. This way, you can edit/spellcheck/apply a style guide to produce sensible output
+
+-genheader takes a first pass at producing a header.csv file, using the text the extractor creates. A human can edit it and use it with future calls to the extractor with the -header option
+
 -json means output as JSON
 -summary spits out a CSV-ish looking set of lines for an election summary. 
 

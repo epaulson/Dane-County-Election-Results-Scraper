@@ -41,7 +41,7 @@ import csv
 # how someone might want to use it
 #  
 
-def parseResults(locallines, starts, dx, top, bottom,elecdesc):
+def parseResults(locallines, starts, dx, top, bottom,elecdesc,electionNumber):
     # clean up end of lines on the extracted text. This was leftover
     # from an early version and probably isn't necessary if later code
     # was more clever. 
@@ -161,7 +161,10 @@ def parseResults(locallines, starts, dx, top, bottom,elecdesc):
     report['WardData'] = wards
     report['VoteTotals'] = totalvotes
     report['Percentages'] = percents
-    report['ElectionDescription'] = ' '.join(elecdesc)
+    if args['header']:
+        report['ElectionDescription'] = providedDesc['Race%d' % (electionNumber)]
+    else:
+        report['ElectionDescription'] = ' '.join(elecdesc)
 
     return report
 
@@ -173,10 +176,20 @@ group = parser.add_mutually_exclusive_group()
 
 parser.add_argument('url', help='The Election URL to scrape')
 parser.add_argument('dir', help='Directory in which to store resulting CSV files. Must exist before running the script')
+parser.add_argument('-header', action="store", help='A CSV File, with a mapping of Races to Descriptions')
 group.add_argument('-json', action="store_true", default=False, help='Format the results as a single JSON object')
 group.add_argument('-summary', action="store_true", default=False, help='One-line summary of each election in the results')
+group.add_argument('-genheader', action="store_true", default=False, help="Create a CSV file of potential headers")
 
 args = vars(parser.parse_args())
+
+
+providedDesc = {}
+if args['header']:
+    headerdata = list(csv.reader(open(args['header'], 'rt')))
+    for row in headerdata[1:]:
+       providedDesc[row[0]] = row[1]
+
 
 if args['url']:
     try:
@@ -281,7 +294,7 @@ for n in range(len(lines)):
     if(headerOver and len(lines[n].strip()) is 0):
         dx = bottom - top 
         #print "Top: %d Bottom %d Total height: %d Start: %d end %d" % (top-previousStart, bottom-previousStart, dx, previousStart, n)
-        extracted.append(parseResults(lines[previousStart:n], starts, dx, top-previousStart, bottom-previousStart,elecdesc))
+        extracted.append(parseResults(lines[previousStart:n], starts, dx, top-previousStart, bottom-previousStart,elecdesc,electionNumber))
 
         # reset the state machine, clear out election description
         previousStart = n 
@@ -303,6 +316,14 @@ elif args['summary']:
         # from http://stackoverflow.com/questions/457215/comprehension-for-flattening-a-sequence-of-sequences 
         joined =  reduce(election_summary[0].__class__.__add__, election_summary)
         print "Race%d,%s,%s" % (i, extracted[i]['ElectionDescription'], ','.join(str(e) for e in joined))
+elif args['genheader']:
+   f = open("headers.csv", "wt")
+   fields = ["RaceID", "RaceDesc"]
+   output = csv.writer(f) 
+   output.writerow(fields)
+   for i in range(electionNumber):
+      output.writerow(["Race%d" % (i), extracted[i]['ElectionDescription']])
+   f.close()
 else:
     for i in range(electionNumber):
         f = open("%s/race%d.csv" % (args['dir'], i), 'wt')
