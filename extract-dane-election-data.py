@@ -18,6 +18,8 @@ import lxml.html
 import argparse
 import csv
 
+def addtwo(x,y): return float(x)+float(y)
+
 #
 # Given a set of lines from the larger election results text,
 # extract the structured data contained. Spit 3 times after
@@ -159,8 +161,22 @@ def parseResults(locallines, starts, dx, top, bottom,elecdesc,electionNumber):
 
     report['Candidates'] = labels
     report['WardData'] = wards
-    report['VoteTotals'] = totalvotes
-    report['Percentages'] = percents
+    report['VoteTotals'] = totalvotes if len(totalvotes) > 0 else [ 0 for i in range(len(labels))] 
+    if len(percents) > 0:
+        report['Percentages'] = percents
+    else: 
+        #
+        # So this is a big mess, because I'm trying to be defensive against a divide by zero. 
+        # If we have a case where there total votes, but they're all zeros, don't divide zero by sum(a bunch of zeros)
+        # if we don't have anything for total votes, then go ahead and report all zeros for the percents
+        # I don't think this will ever happen - if there are Votes reported, the clerk's software should spit out zeros for
+        # the percents and we don't ahve any work to do. 
+        # There are cases where there are total votes but no percents.
+        #
+        # This should all be redone
+        #
+        calculatedtotal = reduce(addtwo, report['VoteTotals'])
+        report['Percentages'] = list(((float(report['VoteTotals'][n]) / float(calculatedtotal)) * 100.0) if float(calculatedtotal) > 0.0 else 0.0 for n in range(len(report['Candidates']))) if len(totalvotes) > 0 else [ 0.00 for i in range(len(labels))] 
     if args['header']:
         report['ElectionDescription'] = providedDesc['Race%d' % (electionNumber)]
     else:
@@ -308,11 +324,10 @@ for n in range(len(lines)):
 if args['json']:
     print json.dumps(extracted)
 elif args['summary']:
-    def addtwo(x,y): return float(x)+float(y)
 
     for i in range(electionNumber):
         #print "\nProcessing Race%d.csv -- %s " % (i, extracted[i]['ElectionDescription'])
-        election_summary =  zip(extracted[i]['Candidates'], map(int, extracted[i]['VoteTotals']), map(float, extracted[i]['Percentages']) if extracted[i]['Percentages'] else list((float(extracted[i]['VoteTotals'][n]) / float(reduce(addtwo, extracted[i]['VoteTotals'] )) * 100.0) for n in range(len(extracted[i]['Candidates']))))
+        election_summary =  zip(extracted[i]['Candidates'], map(int, extracted[i]['VoteTotals']), map(float, extracted[i]['Percentages']) if len(extracted[i]['Percentages']) == len(extracted[i]['Candidates']) else list((float(extracted[i]['VoteTotals'][n]) / float(reduce(addtwo, extracted[i]['VoteTotals'] )) * 100.0) for n in range(len(extracted[i]['Candidates']))))
         # from http://stackoverflow.com/questions/457215/comprehension-for-flattening-a-sequence-of-sequences 
         joined =  reduce(election_summary[0].__class__.__add__, election_summary)
         print "Race%d,%s,%s" % (i, extracted[i]['ElectionDescription'], ','.join(str(e) for e in joined))
